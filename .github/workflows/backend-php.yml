@@ -118,7 +118,6 @@ jobs:
           phpcs -q --report=checkstyle \
                    --standard=$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }} \
                    --ignore=locate\.* \
-                   --extensions=php,sample \
                    ${{ inputs.phpcs-whitelist }} \
                    src/ | cs2pr
 
