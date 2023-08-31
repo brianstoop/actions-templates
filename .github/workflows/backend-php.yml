@@ -30,6 +30,10 @@ on:
         required: false
         type: boolean
         default: false
+      phpcs-whitelist:
+        required: false
+        type: string
+        default: ''
     secrets:
       SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES:
         required: true
@@ -115,9 +119,8 @@ jobs:
                    --standard=$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }} \
                    --ignore=locate\.* \
                    --extensions=php,sample \
-                   index.php cli.php \
-                   support/bootstrap.resque.php tests/test.bootstrap.inc.php tests/phpstan.autoload.inc.php \
-                   src/ config/ | cs2pr
+                   ${{ inputs.phpcs-whitelist }} \
+                   src/ | cs2pr
 
   phpstan:
     runs-on: ubuntu-latest
