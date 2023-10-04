@@ -1,0 +1,36 @@
+name: SQLFluff
+on:
+  workflow_call:
+    inputs:
+      identifier:
+        required: false
+        type: string
+        default: 'SQL Files'
+      path:
+        required: true
+        type: string
+        default: ''
+      dialect:
+        required: false
+        type: string
+        default: 'mysql'
+
+jobs:
+  sqlfluff:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: "SQLFluff (${{ inputs.identifier }})"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+            python-version: "3.11"
+
+      - name: Install SQLFluff
+        run: pip install sqlfluff
+
+      - name: Lint SQL
+        run: sqlfluff lint --disable-progress-bar --dialect=${{ inputs.dialect }} --format=github-annotation-native ${{ inputs.path }}
