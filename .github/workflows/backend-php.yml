@@ -34,6 +34,10 @@ on:
         required: false
         type: string
         default: ''
+      php-extensions:
+        required: false
+        type: string
+        default: 'autoload_psr-pprkut/autoload-psr@0.2.0'
     secrets:
       SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES:
         required: true
@@ -72,7 +76,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           tools: phpunit:${{ inputs.minimum-phpunit-version }}
-          extensions: autoload_psr-pprkut/autoload-psr@0.2.0
+          extensions: ${{ inputs.php-extensions }}
           ini-values: include_path='.:/usr/share/php:$GITHUB_WORKSPACE/vendor'
 
       - name: Setup problem matchers for PHP
