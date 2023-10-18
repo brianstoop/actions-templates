@@ -18,6 +18,14 @@ on:
         required: false
         type: string
         default: '8.1'
+      stable-php-versions:
+        required: true
+        type: string
+        default: '["8.1"]'
+      experimental-php-versions:
+        required: false
+        type: string
+        default: '["8.2", "8.3"]'
       minimum-phpunit-version:
         required: false
         type: string
@@ -43,19 +51,25 @@ on:
         required: true
 
 jobs:
+  generate-matrix:
+    name: Generate matrix for phpunit
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Set matrix for build
+        id: set-matrix
+        run: |
+          JSON=$(jq --null-input --arg stable '${{ inputs.stable-php-versions }}' --arg experimental '${{ inputs.experimental-php-versions }}' '{"php-versions": $stable | fromjson, "experimental": [ false ], "include":[ $experimental | fromjson | .[] as $version | {"php-versions": $version, "experimental": true} ]} | tostring')
+          echo "matrix=$JSON" >> $GITHUB_OUTPUT
+
   phpunit:
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.experimental }}
     name: "PHP-${{ matrix.php-versions }}: PHPUnit"
+    needs: generate-matrix
     strategy:
-      matrix:
-        php-versions: ['8.1']
-        experimental: [false]
-        include:
-          - php-versions: 8.2
-            experimental: true
-          - php-versions: 8.3
-            experimental: true
+      matrix: ${{ fromJson(fromJson(needs.generate-matrix.outputs.matrix)) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
