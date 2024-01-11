@@ -106,7 +106,7 @@ jobs:
         run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
 
       - name: Run PHPunit
-        run: phpunit --configuration tests/phpunit.xml --coverage-clover=coverage.xml
+        run: php -d xdebug.mode=off usr/local/bin/phpunit --configuration tests/phpunit.xml
 
   phpcs:
     runs-on: ubuntu-latest
@@ -176,4 +176,4 @@ jobs:
         run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
 
       - name: Run PHPStan
-        run: phpstan analyze src --level ${{ inputs.phpstan-level }} --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
+        run: php -d xdebug.mode=off usr/local/bin/phpstan analyze src --level ${{ inputs.phpstan-level }} --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
