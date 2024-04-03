@@ -1,0 +1,62 @@
+name: Web migrate Contentful
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'The environment to deploy to'
+        default: 'Test'
+        required: false
+        type: string
+      contentful_space_id:
+        description: 'The contentful space ID'
+        required: true
+        type: string
+    secrets:
+      amazon_role:
+        description: The AWS role to assume to store state in S3
+        required: true
+      npm_pat:
+        description: The PAT for NPM registry access
+        required: true
+      contentful_management_api_token:
+        description: The contentful management API token for migration access
+        required: true
+
+jobs:
+  migrate_contentful:
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    name: 'Contentful migration'
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+    strategy:
+      matrix:
+        node-version: ['18.x']
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://npm.pkg.github.com
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --production=false --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_PAT}}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.amazon_role }}
+
+      - name: Run migration step
+        env:
+          CONTENTFUL_ENVIRONMENT: ${{ inputs.environment }}
+          CONTENTFUL_SPACE: ${{ inputs.contentful_space_id }}
+          CONTENTFUL_MANAGEMENT_API_TOKEN: ${{ secrets.contentful_management_api_token }}
+          MIGRATIONS_STATE_FILE_STORAGE: s3
+          MIGRATIONS_STATE_FILE_BUCKET: '${{ github.repository_owner }}-contentful-migrations'
+          MIGRATIONS_STATE_FILE: migrated.json
+        run: yarn migrate
