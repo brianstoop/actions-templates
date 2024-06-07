@@ -38,10 +38,18 @@ on:
         required: false
         type: boolean
         default: false
+      allow-sonarqube-failures:
+        required: false
+        type: boolean
+        default: false
       phpcs-whitelist:
         required: false
         type: string
         default: ''
+      sonar-host-url:
+        required: false
+        type: string
+        default: 'https://whale.moveagency.com'
       php-extensions:
         required: false
         type: string
@@ -49,6 +57,8 @@ on:
     secrets:
       SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES:
         required: true
+      SONAR_TOKEN:
+        required: false
 
 jobs:
   generate-matrix:
@@ -119,6 +129,12 @@ jobs:
 
       - name: Run PHPunit
         run: phpunit --configuration tests/phpunit.xml --coverage-clover=coverage.xml
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpunit-logs-${{ matrix.php-versions }}
+          path: build/logs/
 
   phpcs:
     runs-on: ubuntu-latest
@@ -201,3 +217,43 @@ jobs:
 
       - name: Run PHPStan
         run: phpstan analyze src --level ${{ inputs.phpstan-level }} --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
+  sonarqube:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.allow-sonarqube-failures }}
+    name: SonarQube
+    needs: [phpunit]
+    steps:
+      - name: Determine variables
+        id: variables
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.repository	}}"
+          ACCOUNT_SLUG=${OWNER/move-/}
+          echo "account=${ACCOUNT_SLUG^^}" >> "$GITHUB_OUTPUT"
+          echo "project=${REPO/$OWNER\//}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download logs
+        uses: actions/download-artifact@v4
+        with:
+          name: phpunit-logs-${{ inputs.minimum-php-version }}
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_HOST_URL: ${{ inputs.sonar-host-url }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: ${{ env.SONAR_TOKEN != '' }}
+        with:
+          projectBaseDir: ./src/
+          args: >
+            -Dsonar.projectKey=${{ steps.variables.outputs.account }}:backend:${{ steps.variables.outputs.project }}
+            -Dsonar.projectName=${{ steps.variables.outputs.project }}
+            -Dsonar.php.tests.reportPath=build/logs/junit.xml
+            -Dsonar.php.coverage.reportPaths=build/logs/clover.xml
+            -Dsonar.plugins.downloadOnlyRequired=true
+            -Dsonar.verbose=true
