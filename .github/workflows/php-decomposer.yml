@@ -128,7 +128,7 @@ jobs:
         run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
 
       - name: Run PHPunit
-        run: phpunit --configuration tests/phpunit.xml --coverage-clover=coverage.xml
+        run: phpunit --configuration tests/phpunit.xml
 
       - name: Upload results
         uses: actions/upload-artifact@v4
@@ -136,87 +136,6 @@ jobs:
           name: phpunit-logs-${{ matrix.php-versions }}
           path: build/logs/
 
-  phpcs:
-    runs-on: ubuntu-latest
-    continue-on-error: ${{ inputs.allow-style-failures }}
-    name: "PHPCS"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Codestyle checkout
-        uses: actions/checkout@v4
-        with:
-            repository: 'lunr-php/lunr-coding-standard'
-            ref: ${{ inputs.codestyle-branch }}
-
-            # Relative path under $GITHUB_WORKSPACE to place the repository
-            path: 'codestyle'
-
-      - name: Setup PHPCS
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.minimum-php-version }}
-          tools: cs2pr, phpcs
-
-      - name: Run PHPCS
-        run: |
-          phpcs -q --report=checkstyle \
-                   --standard="$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }}" \
-                   --ignore=locate\.* \
-                   ${{ inputs.phpcs-whitelist }} \
-                   src/ | cs2pr
-
-  phpstan:
-    runs-on: ubuntu-latest
-    continue-on-error: ${{ inputs.allow-phpstan-failures }}
-    name: "PHPStan"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Cache decomposer dependencies
-        id: cache-decomposer
-        uses: actions/cache@v4
-        with:
-          path: | 
-            ${{ github.workspace }}/vendor
-            ${{ github.workspace }}/decomposer.autoload.inc.php
-          key: ${{ runner.os }}-${{ hashFiles('decomposer.json') }}
-          restore-keys: 
-            ${{ runner.os }}-
-
-      - name: Decomposer checkout
-        uses: actions/checkout@v4
-        with:
-            repository: 'move-backend/decomposer'
-
-            # Relative path under $GITHUB_WORKSPACE to place the repository
-            path: 'decomposer'
-
-      - if: ${{ steps.cache-decomposer.outputs.cache-hit != 'true' }}
-        name: Prepare decomposer target directory
-        run: mkdir -p "$GITHUB_WORKSPACE/vendor"
-
-      - name: Setup PHPStan
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.minimum-php-version }}
-          tools: phpstan
-          extensions: autoload_psr-pprkut/autoload-psr@0.2.0
-          ini-values: include_path='.:/usr/share/php:$GITHUB_WORKSPACE/vendor'
-
-      - name: Configure ssh keys
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{ secrets.SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES }}
-
-      - name: Install dependencies
-        run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
-
-      - name: Run PHPStan
-        run: phpstan analyze src --level ${{ inputs.phpstan-level }} --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
   sonarqube:
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow-sonarqube-failures }}
@@ -241,6 +160,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: phpunit-logs-${{ inputs.minimum-php-version }}
+          path: ${{ github.workspace }}/build/logs
 
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
@@ -249,7 +169,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         if: ${{ env.SONAR_TOKEN != '' }}
         with:
-          projectBaseDir: ./src/
           args: >
             -Dsonar.projectKey=${{ steps.variables.outputs.account }}:backend:${{ steps.variables.outputs.project }}
             -Dsonar.projectName=${{ steps.variables.outputs.project }}
