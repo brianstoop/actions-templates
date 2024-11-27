@@ -59,6 +59,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PAT }}
 
       - name: Build website
+        env:
+          SENTRY_RELEASE: ${{ github.sha }}
         run: yarn build
 
       - name: Upload website
