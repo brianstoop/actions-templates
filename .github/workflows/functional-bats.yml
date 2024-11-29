@@ -1,0 +1,57 @@
+name: Functional Tests
+on:
+  workflow_call:
+    secrets:
+      SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES:
+        required: true
+
+jobs:
+  functional-tests:
+    runs-on: ubuntu-latest
+    name: Install Bats and bats libs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Cache decomposer dependencies
+        id: cache-decomposer
+        uses: actions/cache@v4
+        with:
+          path: | 
+            ${{ github.workspace }}/vendor
+            ${{ github.workspace }}/decomposer.autoload.inc.php
+          key: ${{ runner.os }}-${{ hashFiles('decomposer.json') }}
+          restore-keys: 
+            ${{ runner.os }}-
+
+      - name: Decomposer checkout
+        uses: actions/checkout@v4
+        with:
+            repository: 'move-backend/decomposer'
+
+            # Relative path under $GITHUB_WORKSPACE to place the repository
+            path: 'decomposer'
+
+      - if: ${{ steps.cache-decomposer.outputs.cache-hit != 'true' }}
+        name: Prepare decomposer target directory
+        run: mkdir -p "$GITHUB_WORKSPACE/vendor"
+      
+      - name: Setup Bats and bats libs
+        id: setup-bats
+        uses: bats-core/bats-action@3.0.0
+  
+      - name: Configure ssh keys
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY_FOR_CLONING_NONPUBLIC_BACKEND_GIT_REPOSITORIES }}
+
+      - name: Install dependencies
+        run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
+
+      - name: Pipeline tests
+        shell: bash
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: bats -r tests/functional/testsuites/pipeline
