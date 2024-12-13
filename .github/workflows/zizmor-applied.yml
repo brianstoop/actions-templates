@@ -12,4 +12,8 @@ concurrency:
 
 jobs:
   workflow_syntax:
+    permissions:
+      # required for workflows in private repositories
+      contents: read
+      actions: read
     uses: move-agency/actions-templates/.github/workflows/zizmor.yml@main
