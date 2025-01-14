@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: Stellr
+      codestyle-repo:
+        required: false
+        type: string
+        default: 'move-backend/stellr-coding-standard'
       codestyle-branch:
         required: false
         type: string
@@ -176,12 +180,20 @@ jobs:
       - name: Codestyle checkout
         uses: actions/checkout@v4
         with:
-            repository: 'lunr-php/lunr-coding-standard'
+            repository: ${{ inputs.codestyle-repo }}
             ref: ${{ inputs.codestyle-branch }}
+
+            # Clone submodules recursively. `true` should be enough, but better be safe
+            submodules: 'recursive'
 
             # Relative path under $GITHUB_WORKSPACE to place the repository
             path: 'codestyle'
             persist-credentials: false
+
+      - name: Install dependencies
+        if: ${{ hashFiles('codestyle/composer.json') != '' }}
+        working-directory: 'codestyle'
+        run: composer install
 
       - name: Setup PHPCS
         uses: shivammathur/setup-php@v2
@@ -191,11 +203,20 @@ jobs:
 
       - name: Run PHPCS
         run: |
-          phpcs -q --report=checkstyle \
-                   --standard="$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }}" \
-                   --ignore=locate\.* \
-                   ${{ inputs.phpcs-whitelist }} \
-                   src/ | cs2pr
+          export BOOTSTRAP=$([ -e $GITHUB_WORKSPACE/codestyle/bootstrap.php ] && echo "--bootstrap=$GITHUB_WORKSPACE/codestyle/bootstrap.php" || echo '')
+          export SLEVOMAT=$([ -d $GITHUB_WORKSPACE/codestyle/third-party/slevomat/ ] && echo "--runtime-set installed_paths $GITHUB_WORKSPACE/codestyle/third-party/slevomat/" || echo '')
+          phpcs --report-full \
+                --report-checkstyle=checkstyle.xml \
+                $SLEVOMAT \
+                $BOOTSTRAP \
+                --standard=$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }} \
+                --ignore=locate\.* \
+                ${{ inputs.phpcs-whitelist }} \
+                src/
+
+      - name: Convert checkstyle output to github style
+        if: always()
+        run: cat ./checkstyle.xml | cs2pr
 
   phpstan:
     runs-on: ubuntu-latest
