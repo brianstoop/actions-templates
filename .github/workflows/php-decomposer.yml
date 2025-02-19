@@ -75,8 +75,11 @@ jobs:
     steps:
       - name: Set matrix for build
         id: set-matrix
+        env:
+          STABLE_VERSIONS: ${{ inputs.stable-php-versions }}
+          EXPERIMENTAL_VERSIONS: ${{ inputs.experimental-php-versions }}
         run: |
-          JSON=$(jq --null-input --arg stable '${{ inputs.stable-php-versions }}' --arg experimental '${{ inputs.experimental-php-versions }}' '{"php-versions": $stable | fromjson, "experimental": [ false ], "include":[ $experimental | fromjson | .[] as $version | {"php-versions": $version, "experimental": true} ]} | tostring')
+          JSON=$(jq --null-input --arg stable "$STABLE_VERSIONS" --arg experimental "$EXPERIMENTAL_VERSIONS" '{"php-versions": $stable | fromjson, "experimental": [ false ], "include":[ $experimental | fromjson | .[] as $version | {"php-versions": $version, "experimental": true} ]} | tostring')
           echo "matrix=$JSON" >> "$GITHUB_OUTPUT"
 
   phpunit:
@@ -203,20 +206,22 @@ jobs:
 
       - name: Run PHPCS
         run: |
-          export BOOTSTRAP=$([ -e $GITHUB_WORKSPACE/codestyle/bootstrap.php ] && echo "--bootstrap=$GITHUB_WORKSPACE/codestyle/bootstrap.php" || echo '')
-          export SLEVOMAT=$([ -d $GITHUB_WORKSPACE/codestyle/third-party/slevomat/ ] && echo "--runtime-set installed_paths $GITHUB_WORKSPACE/codestyle/third-party/slevomat/" || echo '')
+          BOOTSTRAP=$([ -e "$GITHUB_WORKSPACE/codestyle/bootstrap.php" ] && echo "--bootstrap=$GITHUB_WORKSPACE/codestyle/bootstrap.php" || echo '')
+          export BOOTSTRAP
+          SLEVOMAT=$([ -d "$GITHUB_WORKSPACE/codestyle/third-party/slevomat/" ] && echo "--runtime-set installed_paths $GITHUB_WORKSPACE/codestyle/third-party/slevomat/" || echo '')
+          export SLEVOMAT
           phpcs --report-full \
                 --report-checkstyle=checkstyle.xml \
-                $SLEVOMAT \
-                $BOOTSTRAP \
-                --standard=$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }} \
+                "$SLEVOMAT" \
+                "$BOOTSTRAP" \
+                --standard="$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }}" \
                 --ignore=locate\.* \
                 ${{ inputs.phpcs-whitelist }} \
                 src/
 
       - name: Convert checkstyle output to github style
         if: always()
-        run: cat ./checkstyle.xml | cs2pr
+        run: cs2pr ./checkstyle.xml
 
   phpstan:
     runs-on: ubuntu-latest
@@ -270,7 +275,9 @@ jobs:
         run: DECOMPOSER_TARGET_DIR="$GITHUB_WORKSPACE/vendor" decomposer/bin/decomposer install
 
       - name: Run PHPStan
-        run: phpstan analyze src --level ${{ inputs.phpstan-level }} --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
+        env:
+          PHPSTAN_LEVEL: ${{ inputs.phpstan-level }}
+        run: phpstan analyze src --level "$PHPSTAN_LEVEL" --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
   sonarqube:
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow-sonarqube-failures }}
