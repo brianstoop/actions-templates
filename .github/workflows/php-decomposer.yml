@@ -210,10 +210,13 @@ jobs:
           export BOOTSTRAP
           SLEVOMAT=$([ -d "$GITHUB_WORKSPACE/codestyle/third-party/slevomat/" ] && echo "--runtime-set installed_paths $GITHUB_WORKSPACE/codestyle/third-party/slevomat/" || echo '')
           export SLEVOMAT
+
+          # Disabling quote requirements because we need the code injection
+          # shellcheck disable=SC2086
           phpcs --report-full \
                 --report-checkstyle=checkstyle.xml \
-                "$SLEVOMAT" \
-                "$BOOTSTRAP" \
+                $SLEVOMAT \
+                $BOOTSTRAP \
                 --standard="$GITHUB_WORKSPACE/codestyle/${{ inputs.codestyle }}" \
                 --ignore=locate\.* \
                 ${{ inputs.phpcs-whitelist }} \
