@@ -91,7 +91,7 @@ jobs:
     needs: generate-matrix
     permissions:
       contents: read
-      checks: read
+      checks: write
     strategy:
       matrix: ${{ fromJson(fromJson(needs.generate-matrix.outputs.matrix)) }}
     steps:
