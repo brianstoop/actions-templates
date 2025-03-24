@@ -12,14 +12,22 @@ on:
         default: false
         required: false
         type: boolean
+      fast-runner:
+        description: 'Use a faster runner'
+        default: false
+        required: false
+        type: boolean
     secrets:
       npm_pat:
         description: The PAT for NPM registry access
         required: true
+      SENTRY_AUTH_TOKEN:
+        description: The token to access Sentry
+        required: true
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.fast-runner && 'namespace-profile-web-16-core' ||  'ubuntu-latest' }}
     name: 'Build (node ${{ matrix.node-version }})'
     env:
       ENVIRONMENT: ${{ inputs.environment }}
@@ -62,7 +70,8 @@ jobs:
 
       - name: Build website
         env:
-          SENTRY_RELEASE: ${{ github.sha }}
+          GIT_COMMIT: ${{ github.sha }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: yarn build
 
       - name: Upload website
