@@ -171,12 +171,12 @@ jobs:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            text: "*GitHub Action build result*: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+            text: "*${{ github.repository }} (${{ github.ref }})*: PHP-${{ matrix.php-versions }}: PHPUnit ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
             blocks:
               - type: "section"
                 text:
                   type: "mrkdwn"
-                  text: "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                  text: "*${{ github.repository }} (${{ github.ref }})*: PHP-${{ matrix.php-versions }}: PHPUnit ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
 
   phpcs:
     runs-on: ubuntu-latest
@@ -236,6 +236,22 @@ jobs:
         if: always()
         run: cs2pr ./checkstyle.xml
 
+      - name: Post a message in a channel
+        uses: slackapi/slack-github-action@v2.0.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "*${{ github.repository }} (${{ github.ref }})*: PHPCS ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*${{ github.repository }} (${{ github.ref }})*: PHPCS ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+
   phpstan:
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow-phpstan-failures }}
@@ -293,10 +309,27 @@ jobs:
         env:
           PHPSTAN_LEVEL: ${{ inputs.phpstan-level }}
         run: phpstan analyze src --level "$PHPSTAN_LEVEL" --configuration tests/phpstan.neon.dist --autoload-file tests/phpstan.autoload.inc.php
+
+      - name: Post a message in a channel
+        uses: slackapi/slack-github-action@v2.0.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "*${{ github.repository }} (${{ github.ref }})*: PHPStan ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*${{ github.repository }} (${{ github.ref }})*: PHPStan ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+
   sonarqube:
     runs-on: ubuntu-latest
     continue-on-error: ${{ inputs.allow-sonarqube-failures }}
-    name: SonarQube
+    name: "SonarQube"
     needs: [phpunit]
     permissions:
       contents: read
@@ -336,3 +369,19 @@ jobs:
             -Dsonar.php.coverage.reportPaths=build/logs/clover.xml
             -Dsonar.plugins.downloadOnlyRequired=true
             -Dsonar.verbose=true
+
+      - name: Post a message in a channel
+        uses: slackapi/slack-github-action@v2.0.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "*${{ github.repository }} (${{ github.ref }})*: SonarQube ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*${{ github.repository }} (${{ github.ref }})*: SonarQube ${{ job.status }}\nURL: ${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
