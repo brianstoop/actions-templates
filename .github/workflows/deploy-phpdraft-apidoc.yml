@@ -21,12 +21,12 @@ jobs:
       id-token: write
     steps:
       - name: Download API doc
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           name: API-documentation
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722 # v4.1.0
         with:
           aws-region: ${{ inputs.amazon_region }}
           role-to-assume: ${{ secrets.amazon_role }}
