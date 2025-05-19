@@ -52,6 +52,9 @@ jobs:
       artifact: build-${{ inputs.node-version }}
       sub-artifact: build-sub-${{ inputs.node-version }}
     steps:
+      - uses: namespacelabs/nscloud-setup@d1c625762f7c926a54bd39252efff0705fd11c64 # v0.0.10
+        if: inputs.fast-runner
+
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -64,6 +67,12 @@ jobs:
           echo "GIT_DESCRIBE=$describe" >> "$GITHUB_ENV"
           version=$(echo "$describe" | sed -E 's/\-[a-z0-9]{5}//')
           echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Set up Namespace yarn cache
+        uses: namespacelabs/nscloud-cache-action@2f50e7d0f70475e6f59a55ba0f05eec9108e77cc # v1.2.7
+        if: inputs.fast-runner
+        with:
+          cache: yarn
 
       - name: Setup node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
