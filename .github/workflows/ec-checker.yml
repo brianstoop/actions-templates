@@ -1,0 +1,43 @@
+name: EditorConfig Checker
+on:
+  workflow_call:
+    inputs:
+      args:
+        type: string
+        default: ''
+      excludes:
+        type: string
+        default: ''
+      files:
+        type: string
+        default: '.'
+      required:
+        type: boolean
+        default: false
+
+jobs:
+  ec-checker:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ !inputs.required }}
+    name: "EditorConfig Compliance"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: editorconfig-action
+        uses: editorconfig-checker/action-editorconfig-checker@40bf873af95eef36e9ebfa2715f4cfaf3ea253b3 # main from 2025-07-21
+
+      - name: Check files
+        run: |
+          # Disabling quote requirements because we need the code injection and split file list
+          # shellcheck disable=SC2086,SC2046
+          editorconfig-checker \
+            ${EC_CHECKER_ARGS} \
+            --exclude="${EC_CHECKER_EXCLUDES}" \
+            $(git ls-files --exclude-standard "${EC_CHECKER_FILES}")
+        env:
+          EC_CHECKER_ARGS: "${{ inputs.args }}"
+          EC_CHECKER_EXCLUDES: "${{ inputs.excludes }}"
+          EC_CHECKER_FILES: "${{ inputs.files }}"
