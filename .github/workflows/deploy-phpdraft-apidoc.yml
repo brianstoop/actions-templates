@@ -6,6 +6,9 @@ on:
         required: false
         default: us-east-1
         type: string
+      bucket_prefix:
+        default: framna-nl
+        type: string
     secrets:
       amazon_role:
         required: true
@@ -48,10 +51,10 @@ jobs:
         if: ${{ contains(steps.detect.outputs.docs, 'backend') }}
         env:
           PROJECT: ${{ steps.generate-project.outputs.project }}
-        run: aws s3 cp --recursive --force --acl public-read backend/ "s3://move-$PROJECT-apidoc/backend"
+        run: aws s3 cp --recursive --force --acl public-read backend/ "s3://${{ inputs.bucket_prefix }}-$PROJECT-apidoc/backend"
 
       - name: Deploy Frontend API doc to S3
         if: ${{ contains(steps.detect.outputs.docs, 'frontend') }}
         env:
           PROJECT: ${{ steps.generate-project.outputs.project }}
-        run: aws s3 cp --recursive --force --acl public-read frontend/ "s3://move-$PROJECT-apidoc/frontend"
+        run: aws s3 cp --recursive --force --acl public-read frontend/ "s3://${{ inputs.bucket_prefix }}-$PROJECT-apidoc/frontend"
