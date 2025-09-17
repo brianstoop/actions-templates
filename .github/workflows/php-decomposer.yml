@@ -33,7 +33,7 @@ on:
       minimum-phpunit-version:
         required: false
         type: string
-        default: '9.5.x'
+        default: '9.5.2x'
       allow-style-failures:
         required: false
         type: boolean
